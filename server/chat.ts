@@ -14,18 +14,28 @@ import {
     }
   }
 
-  function broadcastToChannel(message: string, senderId: string, channel: string, senderName?: string): void {
-    if (!message) return
-    const channelUsers = rooms[channel];
-    for (const [userId, socket] of Object.entries(channelUsers)) {
-      socket.send(JSON.stringify({
-        type: 'Message',
-        name: senderName,
-        message: message,
-        userId: senderId
-    }));
-      // user.send(senderId ? `[${senderId}]: ${message}` : message)
+  function deleteUserFromRoom(userId: string) {
+    for (const [roomId] of Object.entries(rooms)) {
+      delete rooms[roomId][userId];
     }
+  }
+
+  function broadcastToChannel(message: string, senderId: string, channel: string, senderName?: string, messageType: string = "Message"): void {
+    if (!message) return
+    // const channelUsers = rooms[channel];
+    for (const [roomId] of Object.entries(rooms)) {
+      const channelUsers = rooms[roomId];
+      for (const [userId, socket] of Object.entries(channelUsers)) {
+        socket.send(JSON.stringify({
+          type: messageType,
+          senderName: senderName,
+          message: message,
+          senderId: senderId,
+          roomId: channel
+        }));
+      }
+    }
+      // user.send(senderId ? `[${senderId}]: ${message}` : message)
   }
   
   export async function chat(ws: WebSocket): Promise<void> {
@@ -41,15 +51,15 @@ import {
       rooms['Public'] = {};
       rooms['Public'][userId] = ws;
     }
-
-    broadcastToChannel(`User ${userId} has jooined`, '1', 'Public', 'Server');
+    
+    //broadcastToChannel(`A User has jooined......`, '1', 'Public', 'Server');
     
     // send message to joined user
     const availableGroups = Object.keys(rooms);
     const user = users.get(userId);
     if (user) {
         user.send(JSON.stringify({
-            type: 'Info',
+            type: 'UserInfo',
             message: 'Welcome User your Chat Info',
             userId: userId,
             rooms: availableGroups
@@ -68,13 +78,34 @@ import {
         const { code, reason } = event;
         console.log("ws:Close", code, reason);
         users.delete(userId)
-        delete rooms['Public'][userId];
+        deleteUserFromRoom(userId);
         broadcastToChannel(`User ${userId} has left`, '1', 'Public', 'Server');
         // broadcast(`> User with the id ${userId} is disconnected`)
         break;
       } else {
         const messageData = JSON.parse(message);
-        broadcastToChannel(messageData.message, messageData.userId, messageData.room, messageData.name);
+        if (messageData.type === 'USER_JOINED') {
+          broadcastToChannel(`User ${messageData.name} has jooined......`, '1', 'Public', 'Server');
+        } else if(messageData.type === 'CREATE_ROOM') {
+            // create new room and add the user who created that room 
+              rooms[messageData.roomName] = {};
+              const user = users.get(messageData.userId);
+              if (user) {
+                rooms[messageData.roomName][messageData.userId] = user;
+              }
+              const availableGroups = Object.keys(rooms);
+              broadcast(JSON.stringify({
+                type: 'RoomInfo',
+                rooms: availableGroups
+              }));
+        } else {
+            broadcastToChannel(
+               messageData.message,
+               messageData.userId,
+               messageData.room,
+               messageData.name
+            );
+        }
       }
     }
   }

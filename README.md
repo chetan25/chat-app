@@ -8,3 +8,4 @@ Tools: ['React', 'Recoil', 'RXJS' ,'Typescript', 'Deno']
 
 Work in progress ...
 
+deno run --allow-net --allow-read mod.ts
