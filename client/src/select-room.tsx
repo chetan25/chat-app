@@ -53,7 +53,6 @@ export const RoomDialogSelect = ({
     selectedRooms = []
 }: Props) => {
     const classes = useStyles();
-    console.log(selectedRooms, 'selectedRooms');
     const [currentSelection, setCurrntSelection] = React.useState<string[]| undefined>();
   
     useEffect(() => {

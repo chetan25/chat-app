@@ -33,8 +33,8 @@ export const CreateRoom = ({
     const nameRef = useRef<HTMLInputElement>(null);
 
     const createRoom = () => {
-        if (nameRef && nameRef!.current) {
-            onSave(nameRef!.current!.value);
+        if (nameRef && nameRef!.current && nameRef.current.value) {
+            onSave(nameRef.current.value);
         }
        
     }
